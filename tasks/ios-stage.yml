@@ -1,0 +1,38 @@
+---
+- block:
+  - name: Stage image on device
+    ios_command:
+      commands:
+        - command: "copy {{ iospathprefix }}{{ versionmap[device_model].img }} flash:"
+          prompt: filename
+          answer: "{{ versionmap[device_model].img }}"
+      wait_for:
+        - result[0] contains copied
+  when: versionmap[device_model].img not in file_list
+  tags:
+    - software_download
+
+- name: Calculate the Checksum
+  ios_command:
+    commands:
+      - verify /md5 {{ versionmap[device_model].img }}
+    wait_for:
+      - result[0] contains Done
+  register: verify_results
+  tags:
+    - checksum
+
+# - debug: var=verify_results.stdout[0]
+
+- set_fact:
+    device_image_checksum: "{{ verify_results.stdout[0]|regex_search(' ([A-z0-9]+)$','\\1') }}"
+  tags:
+    - checksum
+
+# - debug: var=versionmap[device_model].checksum
+
+- name: Compare checksums
+  assert:
+    that:
+      - "device_image_checksum[0] == versionmap[device_model].checksum"
+    msg: "Checksums do not match"

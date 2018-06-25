@@ -1,0 +1,51 @@
+---
+- include_tasks: facts.yml
+
+- name: Verify image version in network_image_map
+  assert:
+    that:
+      - "network_image_map[device_required_version] is defined"
+    msg: "{{ device_required_version }} is not in network_image_map"
+
+- name: Setting kickstart image filename
+  set_fact:
+    install_kickstart: "kickstart {{ network_image_map[device_required_version].kickstart_image_url.split('/')[-1] }}"
+  when: network_image_map[device_required_version].kickstart_image_url is defined
+
+- name: Setting system image filename
+  set_fact:
+    system_image_filename: "{{ network_image_map[device_required_version].system_image_url.split('/')[-1] }}"
+    install_disruptive: "{{ 'non-disruptive' if (not allow_disruptive|bool) else ''}}"
+
+- name: Run {{ install_disruptive }} installation
+  nxos_command:
+    commands:
+      - command: "install all {{ install_disruptive }} {{ install_kickstart | default('') }} system {{ system_image_filename }}"
+        prompt: Do you want to continue with the installation (y/n)?
+        answer: y
+  register: command_output
+  failed_when: "'FAIL' in command_output.stdout[0]"
+
+- debug: var=command_output
+
+- name: Wait For Device To Come Back Up
+  wait_for:
+    port: 22
+    timeout: 600
+    host: "{{ ansible_host }}"
+    # delay: 60
+  delegate_to: localhost
+
+- name: Get switch information
+  nxos_command:
+    commands:
+      - show version
+  register: command_output
+
+- set_fact:
+    version_data: "{{ command_output.stdout[0] | parse_cli_textfsm('cisco_nxos_show_version.template') }}"
+
+- assert:
+    that:
+      - version_data[0].OS == device_required_version
+    msg: "Device is running {{ version_data[0].OS }}, not {{ device_required_version }}"

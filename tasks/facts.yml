@@ -3,19 +3,18 @@
 
 - debug: msg="Switch Model {{ device_model }}, version {{ device_version }}, {{ device_storage_free }}/{{ device_storage_total }} bytes available"
 
-- block:
-  - name: Verify device model in network_version_map
-    assert:
-      that:
-        - "network_version_map[device_model] is defined"
-      msg: "{{ device_model }} is not in network_version_map"
+- name: Verify device model in network_version_map
+  assert:
+    that:
+      - "network_version_map[device_platform] is defined"
+      - "network_version_map[device_platform].version is defined"
+      - "network_version_map[device_platform].software is defined"
+    msg: "{{ device_platform }} is not in network_version_map"
 
-  - name: Setting the required version
-    set_fact:
-      device_required_version: "{{ network_version_map[device_model] }}"
-  when: device_required_version is not defined
+- name: Setting the required version
+  set_fact:
+    device_required_version: "{{ network_version_map[device_platform].version }}"
+    device_required_software: "{{ network_version_map[device_platform].software }}"
 
-- meta: end_play
-  when: device_version == device_required_version
-
-- debug: msg="Device {{ inventory_hostname }} requires upgrade to {{ device_required_version }}"
+- debug: msg="Device {{ inventory_hostname }} requires installation of {{ device_required_version }} (was {{ device_version }})"
+  when: device_version != device_required_version

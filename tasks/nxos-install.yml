@@ -10,6 +10,7 @@
 - name: Setting kickstart image filename
   set_fact:
     install_kickstart: "kickstart {{ network_image_map[device_required_version].kickstart_image_url.split('/')[-1] }}"
+    kickstart_image_file: "{{ network_image_map[device_required_version].kickstart_image_url.split('/')[-1] }}"
   when: network_image_map[device_required_version].kickstart_image_url is defined
 
 - name: Setting system image filename
@@ -18,34 +19,38 @@
     install_disruptive: "{{ 'non-disruptive' if (not allow_disruptive|bool) else ''}}"
 
 - name: Run {{ install_disruptive }} installation
-  nxos_command:
-    commands:
-      - command: "install all {{ install_disruptive }} {{ install_kickstart | default('') }} system {{ system_image_filename }}"
-        prompt: Do you want to continue with the installation (y/n)?
-        answer: y
+  check_mode: no
+  nxos_install_os:
+    system_image_file: "{{ system_image_filename }}"
+    kickstart_image_file: "{{ kickstart_image_file | default(omit) }}"
   register: command_output
-  failed_when: "'FAIL' in command_output.stdout[0]"
 
 - debug: var=command_output
 
-- name: Wait For Device To Come Back Up
+- name: Parsing verification output
+  set_fact:
+    upgrade_data: "{{ command_output.install_state[0] | parse_cli_textfsm('cisco_nxos_show_install.template') }}"
+
+- debug: msg="Module(s) {{ upgrade_data | selectattr("UPGRADE_REQUIRED", "match", "^yes$") | map(attribute='MODULE') | list | unique | join(',') }} require(s) upgrade"
+
+- name: Wait for device to come back up
   wait_for:
     port: 22
-    timeout: 600
+    timeout: 1800
     host: "{{ ansible_host }}"
-    # delay: 60
+    delay: 60
   delegate_to: localhost
 
-- name: Get switch information
+- name: Get current software version
   nxos_command:
     commands:
-      - show version
+      - show version | json
   register: command_output
 
 - set_fact:
-    version_data: "{{ command_output.stdout[0] | parse_cli_textfsm('cisco_nxos_show_version.template') }}"
+    device_version: "{{ command_output.stdout_lines[0].sys_ver_str }}"
 
 - assert:
     that:
-      - version_data[0].OS == device_required_version
-    msg: "Device is running {{ version_data[0].OS }}, not {{ device_required_version }}"
+      - device_version == device_required_version
+    msg: "Device is running {{ device_version }}, not {{ device_required_version }}"

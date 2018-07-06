@@ -7,8 +7,6 @@
       - show inventory
   register: command_output
 
-# - debug: var=command_output
-
 - set_fact:
     version_data: "{{ command_output.stdout[0] | parse_cli_textfsm('cisco_nxos_show_version.template') }}"
     dir_data: "{{ command_output.stdout[1] | parse_cli_textfsm('cisco_nxos_dir.template') }}"
@@ -23,6 +21,7 @@
 
 - set_fact:
     device_model: "{{ hardware_data[0].PID }}"
+    device_platform: "{{ (hardware_data[0].PID | regex_search('^([^-]+-C[^-]+)', '\\1'))[0] }}"
     device_version: "{{ version_data[0].OS }}"
     device_storage_free: "{{ dir_data[0].TOTAL_FREE|int }}"
     device_storage_total: "{{ dir_data[0].TOTAL_SIZE }}"

@@ -1,6 +1,0 @@
----
-- include_tasks: "{{ item }}"
-  with_first_found:
-    - files:
-        - "{{ ansible_network_os }}-{{ device_model }}-upgrade.yml"
-        - "{{ ansible_network_os }}-upgrade.yml"

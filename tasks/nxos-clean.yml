@@ -28,5 +28,6 @@
     commands:
       - "delete {{ image_item }} no-prompt"
   with_items: "{{ delete_image_list }}"
+  when: really_delete_files|bool
   loop_control:
     loop_var: image_item

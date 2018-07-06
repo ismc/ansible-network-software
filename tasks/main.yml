@@ -1,4 +1,2 @@
 ---
 - include_tasks: "facts.yml"
-
-- include_tasks: "stage.yml"

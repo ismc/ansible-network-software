@@ -16,14 +16,6 @@
     version_data: "{{ command_output.stdout[0] | parse_cli_textfsm(version_template) }}"
     dir_data: "{{ command_output.stdout[1] | parse_cli_textfsm(dir_template) }}"
 
-- debug: var=version_data
-# - debug: var=version_data
-# - debug: var=dir_data
-# - debug: var=hardware_data
-# - debug: var=vpc_data
-# - debug: var=interface_data
-# - debug: var=cdp_data
-
 - set_fact:
     device_model: "{{ version_data[0].HARDWARE[0] }}"
     device_platform: "{{ (version_data[0].HARDWARE[0]|regex_search('^([^-]+-C[^-]+)', '\\1'))[0] }}"

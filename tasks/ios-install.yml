@@ -24,13 +24,13 @@
       save_when: changed
     register: image_activate
 
-  # - name: Reload the Switch
-  #   ios_command:
-  #     commands:
-  #       - command: reload
-  #         prompt: Proceed with reload?
-  #         answer: y
-  #   when: image_activate.changed
+  - name: Reload the Switch
+    ios_command:
+      commands:
+        - command: reload
+          prompt: Proceed with reload?
+          answer: y
+    when: image_activate.changed
   when: stack_install_mode == 'BUNDLE'
 
 - block:
@@ -63,9 +63,19 @@
     delay: 600
   delegate_to: localhost
 
-- include_tasks: facts.yml
+- name: Get switch information
+  ios_command:
+    commands:
+      - show version
+  register: command_output
+  retries: 6
+  delay: 10
+
+- name: Parse the command output
+  set_fact:
+    version_data: "{{ command_output.stdout[0] | parse_cli_textfsm(version_template) }}"
 
 - assert:
     that:
-      - device_version == device_required_version
-    msg: "Device is running {{ device_version }}, not {{ device_required_version }}"
+      - version_data[0].VERSION == device_required_version
+    msg: "Device is running {{ version_data[0].VERSION }}, not {{ device_required_version }}"

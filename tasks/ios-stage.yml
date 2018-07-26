@@ -3,6 +3,7 @@
   assert:
     that:
       - "network_image_map[device_required_software] is defined"
+      - "network_image_map[device_required_software].system_image_url is defined"
     msg: "{{ device_required_software }} is not in network_image_map"
 
 - name: Setting system image filename
@@ -42,17 +43,23 @@
           - "device_storage_free|int >= network_image_map[device_required_software].system_image_size|int"
         msg: "Image requires {{ network_image_map[device_required_software].system_image_size }} but only {{ device_storage_free }} is available"
 
-    - name: Staging local file {{ system_image_filename }}
-      net_put:
-        src: "/{{ network_image_map[device_required_software].system_image_url.split('/')[3:] | join('/') }}"
-        dest: "{{ system_image_filename }}"
+    - block:
+      - name: Enable SCP
+        ios_config:
+        lines:
+          - ip scp server enable
+
+      - name: Staging local file {{ system_image_filename }}
+        net_put:
+          src: "/{{ network_image_map[device_required_software].system_image_url.split('/')[3:] | join('/') }}"
+          dest: "flash:/{{ system_image_filename }}"
       when: network_image_map[device_required_software].system_image_url is search("^file:///")
 
-    - name: Staging remote file {{ network_image_map[device_required_software].system_image_url }}
+    - name: Staging remote file {{ system_image_filename }}
       ios_command:
         commands:
-          - command: "copy /verify {{ network_image_map[device_required_software].system_image_url }} flash:"
-            prompt: filename
-            answer: "\r"
+          - command: "copy /verify {{ network_image_map[device_required_software].system_image_url }} flash:/{{ system_image_filename }}"
+            prompt: Destination filename
+            answer: "{{ system_image_filename }}"
       when: network_image_map[device_required_software].system_image_url is not search("^file:///")
   when: stage_system_image

@@ -7,17 +7,16 @@
       - show inventory
   register: command_output
 
-- set_fact:
-    version_data: "{{ command_output.stdout[0] | parse_cli_textfsm('cisco_nxos_show_version.template') }}"
-    dir_data: "{{ command_output.stdout[1] | parse_cli_textfsm('cisco_nxos_dir.template') }}"
-    hardware_data: "{{ command_output.stdout[2] | parse_cli_textfsm('cisco_nxos_show_inventory.template') }}"
+- name: Find the version specific templates
+  set_fact:
+    version_template: "{{ role_path }}/templates/{{ ansible_network_os }}_show_version.textfsm"
+    dir_template: "{{ role_path }}/templates/{{ ansible_network_os }}_dir.textfsm"
+    inventory_template: "{{ role_path }}/templates/{{ ansible_network_os }}_show_inventory.textfsm"
 
-# - debug: var=version_data
-# - debug: var=dir_data
-# - debug: var=hardware_data
-# - debug: var=vpc_data
-# - debug: var=interface_data
-# - debug: var=cdp_data
+- set_fact:
+    version_data: "{{ command_output.stdout[0] | parse_cli_textfsm(version_template) }}"
+    dir_data: "{{ command_output.stdout[1] | parse_cli_textfsm(dir_template) }}"
+    hardware_data: "{{ command_output.stdout[2] | parse_cli_textfsm(inventory_template) }}"
 
 - set_fact:
     device_model: "{{ hardware_data[0].PID }}"

@@ -34,25 +34,42 @@
   when: stack_install_mode == 'BUNDLE'
 
 - block:
-  - name: Add image {{ system_image_filename }}
+  # - name: Add image {{ system_image_filename }}
+  #   ios_command:
+  #     commands:
+  #       - command: "install add file flash:{{ system_image_filename }}"
+  #         prompt: save configuration
+  #         answer: y
+  #   register: upgrade_results
+
+  - name: Installing image {{ system_image_filename }}
     ios_command:
       commands:
-        - command: "install add file flash:{{ system_image_filename }}"
+        - command: "request platform software package install switch all file flash:{{ system_image_filename }} retain-source-file new auto-copy"
           prompt: save configuration
           answer: y
     register: upgrade_results
+    failed_when: "'FAILED' in upgrade_results.stdout"
 
-  - debug: var=upgrade_results
+  - debug: var=upgrade_results.stdout
 
-  - name: Activate image {{ system_image_filename }}
+  - debug: var=upgrade_results.stdout
+    when: "'FAILED' in upgrade_results.stdout"
+
+  - name: Reloading the Switch
     ios_command:
       commands:
-        - command: "install activate"
-          prompt: reload
-          answer: yes
-    register: upgrade_results
+        - command: reload
+          prompt: Save?
+          answer: "yes\r\r"
 
-  - debug: var=upgrade_results
+  # - name: Activate image {{ system_image_filename }}
+  #   ios_command:
+  #     commands:
+  #       - command: "install activate"
+  #         prompt: reload
+  #         answer: yes
+  #   register: upgrade_results
   when: stack_install_mode == 'INSTALL'
 
 - name: Wait for device to come back up
@@ -62,6 +79,9 @@
     host: "{{ ansible_host }}"
     delay: 600
   delegate_to: localhost
+
+- name: Reset the persitent SSH connection
+  meta: reset_connection
 
 - name: Get switch information
   ios_command:

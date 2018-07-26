@@ -2,8 +2,8 @@
 - name: Verify image version in network_image_map
   assert:
     that:
-      - "network_image_map[device_required_version] is defined"
-    msg: "{{ device_required_version }} is not in network_image_map"
+      - "network_image_map[device_required_software] is defined"
+    msg: "{{ device_required_software }} is not in network_image_map"
 
 - name: Create the list of images to ignore (active + staged)
   set_fact:
@@ -11,8 +11,8 @@
   with_items:
     - "{{ device_system_image }}"
     - "{{ device_kickstart_image }}"
-    - "{{ network_image_map[device_required_version].kickstart_image_url.split('/')[-1] if (network_image_map[device_required_version].kickstart_image_url is defined) else '' }}"
-    - "{{ network_image_map[device_required_version].system_image_url.split('/')[-1] if (network_image_map[device_required_version].system_image_url is defined) else '' }}"
+    - "{{ network_image_map[device_required_software].kickstart_image_url.split('/')[-1] if (network_image_map[device_required_software].kickstart_image_url is defined) else '' }}"
+    - "{{ network_image_map[device_required_software].system_image_url.split('/')[-1] if (network_image_map[device_required_software].system_image_url is defined) else '' }}"
   loop_control:
     loop_var: image_item
 
@@ -28,6 +28,6 @@
     commands:
       - "delete {{ image_item }} no-prompt"
   with_items: "{{ delete_image_list }}"
-  when: really_delete_files|bool
+  when: delete_image_list and (really_delete_files|bool)
   loop_control:
     loop_var: image_item

@@ -14,4 +14,3 @@ Start
   ^PID:\s+,.*VID:\s+${VID}.*
   ^.*SN:\s+${SN} -> Record
   ^.*SN: -> Record
-

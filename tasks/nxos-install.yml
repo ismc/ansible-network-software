@@ -1,5 +1,5 @@
 ---
-- include_tasks: facts.yml
+- include_tasks: "{{ ansible_network_os }}-facts.yml"
 
 - name: Verify image version in network_image_map
   assert:
